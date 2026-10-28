@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mesa de Ayuda</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style type="text/tailwindcss">
+@layer components{
+ .inp{@apply w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-teal-500 outline-none}
+ .inp:disabled,.inp[readonly]{@apply bg-slate-100 text-slate-500}
+ .btn{@apply rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50}
+}
+</style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-100 text-slate-800">
+
+<header class="bg-sky-700 text-white shadow">
+ <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+  <h1 class="font-bold text-lg">Bitacora</h1>
+  <div id="hdrUser" class="hidden items-center gap-3 text-sm">
+   <span id="uName" class="hidden sm:inline"></span>
+   <button id="btnOut" class="bg-white/20 hover:bg-white/30 rounded-lg px-3 py-1.5">Cerrar sesión</button>
+  </div>
+ </div>
+</header>
+
+<main class="flex-1 w-full max-w-6xl mx-auto p-3 sm:p-4">
+
+ <!-- LOGIN -->
+ <section id="login" class="max-w-sm mx-auto mt-10 bg-white rounded-xl shadow p-6">
+  <h2 class="text-xl font-bold mb-4">Iniciar sesión</h2>
+  <form id="lForm" class="space-y-3">
+   <input id="lMail" type="email" required placeholder="Correo" class="inp" autocomplete="username">
+   <input id="lPass" type="password" required placeholder="Contraseña" class="inp" autocomplete="current-password">
+   <p id="lErr" class="text-sm text-red-600"></p>
+   <button class="btn bg-teal-700 hover:bg-teal-800 w-full">Ingresar</button>
+  </form>
+  <button id="btnRec" class="mt-3 text-sm text-teal-700 underline">¿Olvidaste tu contraseña?</button>
+ </section>
+
+ <!-- APP -->
+ <section id="app" class="hidden space-y-4">
+  <div class="bg-white rounded-xl shadow p-4">
+   <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+    <label class="col-span-2 lg:col-span-2"><span class="text-xs font-semibold">Asunto o correo</span><input id="q" class="inp" placeholder="Buscar…"></label>
+    <label class="col-span-2 lg:col-span-1"><span class="text-xs font-semibold">Responsable</span><select id="fResp" class="inp"></select></label>
+    <label><span class="text-xs font-semibold">Mes</span><select id="fMes" class="inp"></select></label>
+    <label><span class="text-xs font-semibold">Año</span><select id="fAnio" class="inp"></select></label>
+    <label class="col-span-2 lg:col-span-1"><span class="text-xs font-semibold">Estado</span><select id="fEst" class="inp"></select></label>
+   </div>
+   <div class="flex flex-wrap gap-2 mt-4">
+    <button id="bClr" class="btn bg-slate-500 hover:bg-slate-600 flex-1 sm:flex-none">Limpiar</button>
+    <button id="bBus" class="btn bg-teal-500 hover:bg-teal-600 flex-1 sm:flex-none">Buscar</button>
+    <button id="bAdd" class="btn bg-amber-500 hover:bg-amber-600 flex-1 sm:flex-none sm:ml-auto">Añadir</button>
+   </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow overflow-hidden">
+   <div id="cnt" class="px-4 py-2 text-sm text-slate-500 border-b"></div>
+   <div class="overflow-x-auto">
+    <table class="w-full text-sm text-left">
+     <thead class="bg-slate-50 text-slate-600">
+      <tr>
+       <th class="p-2">Responsable</th><th class="p-2">Asunto</th>
+       <th class="p-2 hidden sm:table-cell">Fecha</th>
+       <th class="p-2 hidden lg:table-cell">Categoría</th><th class="p-2 hidden lg:table-cell">Sub categoría</th><th class="p-2 hidden lg:table-cell">SS categoría</th>
+       <th class="p-2">Estado</th><th class="p-2">Acción</th>
+      </tr>
+     </thead>
+     <tbody id="tb"></tbody>
+    </table>
+   </div>
+  </div>
+ </section>
+</main>
+
+<footer class="bg-slate-800 text-slate-300 text-xs text-center py-4 px-3">
+ © <span id="yr"></span> Mesa de Ayuda · Registros sincronizados con Google Sheets
+</footer>
+
+<!-- MODAL RECUPERAR -->
+<div id="recM" class="hidden fixed inset-0 bg-black/50 z-50 overflow-y-auto p-3">
+ <div class="mx-auto mt-16 max-w-sm bg-white rounded-xl p-5 space-y-3">
+  <h3 class="font-bold text-lg">Cambiar contraseña</h3>
+  <input id="rMail" type="email" placeholder="Correo registrado" class="inp">
+  <input id="rNew" type="password" placeholder="Nueva contraseña (mín. 6)" class="inp">
+  <input id="rNew2" type="password" placeholder="Repetir contraseña" class="inp">
+  <div class="flex gap-2 justify-end">
+   <button id="rCancel" class="btn bg-slate-500">Cancelar</button>
+   <button id="rOk" class="btn bg-teal-700">Cambiar</button>
+  </div>
+ </div>
+</div>
+
+<!-- MODAL REGISTRO -->
+<div id="fm" class="hidden fixed inset-0 bg-black/50 z-50 overflow-y-auto p-2 sm:p-4">
+ <div class="mx-auto max-w-5xl bg-white rounded-xl p-4 sm:p-6">
+  <h3 id="fTitle" class="font-bold text-lg mb-4"></h3>
+  <div id="fForm" class="grid grid-cols-4 md:grid-cols-8 gap-3"></div>
+  <div class="flex gap-2 justify-end mt-5">
+   <button id="fCancel" class="btn bg-slate-500 hover:bg-slate-600">Cancelar</button>
+   <button id="fOk" class="btn bg-teal-700 hover:bg-teal-800"></button>
+  </div>
+ </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
