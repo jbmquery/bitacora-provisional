@@ -372,6 +372,18 @@
  <div class="mx-auto max-w-5xl bg-white rounded-xl p-4 sm:p-6">
   <h3 id="gTitle" class="font-bold text-lg mb-4"></h3>
   <div id="gForm" class="grid grid-cols-4 md:grid-cols-8 gap-3"></div>
+  <div id="gAdj" class="mt-5 border-t border-slate-200 pt-4">
+   <div class="flex items-center justify-between gap-2 flex-wrap">
+    <div>
+     <h4 class="text-xs font-semibold uppercase text-slate-600">Archivos adjuntos (prueba de la solicitud)</h4>
+     <p class="text-[11px] text-slate-400">PNG, JPG, JPEG o PDF · las imágenes se comprimen automáticamente · PDF máx. 10 MB</p>
+    </div>
+    <button id="gAdjAdd" type="button" class="btn bg-sky-700 hover:bg-sky-800 !px-3 !py-1.5 text-xs">＋ Añadir archivo</button>
+    <input id="gAdjInput" type="file" multiple accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf" class="hidden">
+   </div>
+   <p id="gAdjMsg" class="hidden text-xs text-red-600 mt-2"></p>
+   <ul id="gAdjList" class="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2"></ul>
+  </div>
   <div class="flex gap-2 justify-end mt-5">
    <button id="gCancel" type="button" class="btn bg-slate-500 hover:bg-slate-600">Cancelar</button>
    <button id="gOk" type="button" class="btn bg-teal-700 hover:bg-teal-800"></button>

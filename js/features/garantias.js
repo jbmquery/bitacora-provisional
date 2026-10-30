@@ -1,12 +1,14 @@
 import { api as defaultApi } from '../services/api.js';
 import { $, $$, escapeHtml as esc, setOptions as opts, show } from '../components/dom.js';
 import { BIENES_GARANTIA, ESTADOS_GARANTIA, FG, SPAN_MAP_G } from '../config/app-config.js';
+import { createAdjuntosManager } from './garantias-adjuntos.js';
 
 export function createGarantiasFeature({ state, api = defaultApi }) {
   let mode = 'add';
   let currentTicket = '';
   let initialized = false;
   let rows = [];
+  const adjuntos = createAdjuntosManager({ api });
 
   const EG = key => $(`#gForm [data-gk="${key}"]`);
 
@@ -88,6 +90,7 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     opts($('#gfEst'), ESTADOS_GARANTIA, 'TODOS');
 
     armarModal();
+    adjuntos.bind();
 
     $('#gbBus').onclick = buscar;
     $('#gbClr').onclick = () => {
@@ -98,11 +101,11 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       buscar();
     };
     $('#gbAdd').onclick = () => abrir('add');
-    $('#gCancel').onclick = () => show('#gm', false);
+    $('#gCancel').onclick = cerrar;
     $('#gOk').onclick = guardar;
 
     $('#gm').addEventListener('click', event => {
-      if (event.target === $('#gm')) show('#gm', false);
+      if (event.target === $('#gm')) cerrar();
     });
 
     $('#gResultados').addEventListener('click', async event => {
@@ -133,6 +136,12 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     });
 
     buscar();
+  }
+
+  function cerrar() {
+    if (adjuntos.isBusy()) return;
+    if (adjuntos.hasPending() && !confirm('Hay archivos seleccionados que aún no se han subido. ¿Cerrar de todos modos?')) return;
+    show('#gm', false);
   }
 
   async function buscar() {
@@ -305,7 +314,8 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
                     <span class="text-sm text-slate-700">${esc(item.oficina || '—')} ${item.predio ? `<span class="text-xs text-slate-400">(${esc(item.predio)})</span>` : ''}</span>
                   </div>
                 </div>
-                <div class="flex items-center justify-end lg:self-center">
+                <div class="flex items-center justify-end gap-2 lg:self-center">
+                  ${String(item.ADJUNTOS || '').startsWith('https://drive.google.com/') ? `<a href="${esc(item.ADJUNTOS)}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-sky-700 hover:underline" title="Abrir carpeta de adjuntos">📎 Adjuntos</a>` : ''}
                   <button type="button" data-ticket="${esc(item.TICKET)}" class="btn-edit-garantia btn bg-teal-700 hover:bg-teal-800 !px-3.5 !py-1.5 text-xs flex items-center gap-1.5">
                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -354,6 +364,7 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     }
 
     show('#gm', true);
+    adjuntos.reset(mode === 'edit' ? currentTicket : '');
   }
 
   async function guardar() {
@@ -411,9 +422,33 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
         return;
       }
 
+      const ticket = String(res.ticket || R.TICKET);
+
+      // Subida de archivos adjuntos (después de guardar, porque la carpeta usa el N° de ticket)
+      let failed = [];
+      if (adjuntos.hasPending()) {
+        $('#gCancel').disabled = true;
+        failed = await adjuntos.uploadPending(ticket, (done, total) => {
+          b.textContent = `Subiendo ${done}/${total}…`;
+        });
+        $('#gCancel').disabled = false;
+      }
+
+      if (failed.length) {
+        // El registro ya existe: pasamos a modo edición para que reintentar no lo duplique.
+        mode = 'edit';
+        currentTicket = ticket;
+        $('#gTitle').textContent = `Actualizar Garantía · Ticket #${ticket}`;
+        EG('TICKET').value = ticket;
+        adjuntos.setTicket(ticket);
+        alert(`La garantía #${ticket} se guardó, pero no se pudieron subir estos archivos:\n- ${failed.join('\n- ')}\n\nPulsa "Actualizar" para reintentar.`);
+        await buscar();
+        return;
+      }
+
       alert(requestMode === 'add'
-        ? `Garantía registrada (TICKET #${res.ticket})`
-        : `Garantía #${res.ticket || R.TICKET} actualizada correctamente`);
+        ? `Garantía registrada (TICKET #${ticket})`
+        : `Garantía #${ticket} actualizada correctamente`);
       show('#gm', false);
       await buscar();
     } catch (error) {
@@ -421,6 +456,8 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       alert('Ocurrió un error al guardar la garantía. Inténtalo nuevamente.');
     } finally {
       b.disabled = false;
+      $('#gCancel').disabled = false;
+      b.textContent = mode === 'add' ? 'Guardar' : 'Actualizar';
     }
   }
 
