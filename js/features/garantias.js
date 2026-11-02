@@ -3,6 +3,9 @@ import { $, $$, escapeHtml as esc, setOptions as opts, show } from '../component
 import { BIENES_GARANTIA, ESTADOS_GARANTIA, FG, SPAN_MAP_G } from '../config/app-config.js';
 import { createAdjuntosManager } from './garantias-adjuntos.js';
 
+const ICON_COPY = '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
+const ICON_CHECK = '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+
 export function createGarantiasFeature({ state, api = defaultApi }) {
   let mode = 'add';
   let currentTicket = '';
@@ -114,8 +117,9 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
         try {
           await navigator.clipboard.writeText(copyButton.dataset.serie || '');
           const original = copyButton.innerHTML;
-          copyButton.textContent = '¡Copiado!';
-          setTimeout(() => { copyButton.innerHTML = original; }, 1200);
+          copyButton.innerHTML = ICON_CHECK;
+          copyButton.title = '¡Copiado!';
+          setTimeout(() => { copyButton.innerHTML = original; copyButton.title = 'Copiar N° de Serie'; }, 1200);
         } catch (error) {
           console.error('No se pudo copiar el número de serie:', error);
           alert('No se pudo copiar el número de serie.');
@@ -287,31 +291,31 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
           ${items.map(item => `
             <div class="p-4 hover:bg-slate-50/70 transition-colors">
               <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 flex-1">
-                  <div>
-                    <span class="block text-[11px] font-semibold uppercase text-slate-400">Ticket · Bien</span>
-                    <span class="text-sm font-bold text-slate-800">#${esc(item.TICKET)} · ${esc(item.BIEN || '—')}</span>
-                  </div>
-                  <div>
-                    <span class="block text-[11px] font-semibold uppercase text-slate-400">Marca</span>
-                    <span class="text-sm font-medium text-slate-700">${esc(item.Marca || '—')}</span>
-                  </div>
-                  <div>
-                    <span class="block text-[11px] font-semibold uppercase text-slate-400">N° de Serie</span>
-                    <div class="flex items-center gap-1.5 mt-0.5">
-                      <span class="text-sm font-mono font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">${esc(item['Nro Serie'] || '—')}</span>
-                      ${item['Nro Serie'] ? `
-                        <button type="button" data-serie="${esc(item['Nro Serie'])}" class="btn-copy-serie text-xs bg-slate-600 hover:bg-slate-700 text-white px-2 py-1 rounded font-semibold transition" title="Copiar N° de Serie">Copiar</button>
-                      ` : ''}
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+                  <div class="sm:col-span-2 flex flex-wrap items-start gap-x-6 gap-y-3">
+                    <div>
+                      <span class="block text-[11px] font-semibold uppercase text-slate-400">Ticket · Bien</span>
+                      <span class="text-sm font-bold text-slate-800">#${esc(item.TICKET)} · ${esc(item.BIEN || '—')}</span>
+                    </div>
+                    <div>
+                      <span class="block text-[11px] font-semibold uppercase text-slate-400">N° de Serie</span>
+                      <div class="flex items-center gap-1.5 mt-0.5">
+                        <span class="text-sm font-mono font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">${esc(item['Nro Serie'] || '—')}</span>
+                        ${item['Nro Serie'] ? `
+                          <button type="button" data-serie="${esc(item['Nro Serie'])}" class="btn-copy-serie bg-slate-600 hover:bg-slate-700 text-white p-1.5 rounded transition" title="Copiar N° de Serie" aria-label="Copiar N° de Serie">${ICON_COPY}</button>
+                        ` : ''}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <span class="block text-[11px] font-semibold uppercase text-slate-400">Patrimonio</span>
-                    <span class="text-sm font-mono text-slate-700">${esc(item.Patrimonio || '—')}</span>
-                  </div>
-                  <div>
-                    <span class="block text-[11px] font-semibold uppercase text-slate-400">Oficina</span>
-                    <span class="text-sm text-slate-700">${esc(item.oficina || '—')} ${item.predio ? `<span class="text-xs text-slate-400">(${esc(item.predio)})</span>` : ''}</span>
+                  <div class="sm:col-span-1 flex flex-wrap items-start gap-x-6 gap-y-3">
+                    <div>
+                      <span class="block text-[11px] font-semibold uppercase text-slate-400">Marca</span>
+                      <span class="text-sm font-medium text-slate-700">${esc(item.Marca || '—')}</span>
+                    </div>
+                    <div>
+                      <span class="block text-[11px] font-semibold uppercase text-slate-400">Oficina</span>
+                      <span class="text-sm text-slate-700">${esc(item.oficina || '—')} ${item.predio ? `<span class="text-xs text-slate-400">(${esc(item.predio)})</span>` : ''}</span>
+                    </div>
                   </div>
                 </div>
                 <div class="flex items-center justify-end gap-2 lg:self-center">
@@ -350,6 +354,7 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       EG('TICKET').value = 'Automático';
       EG('Fecha Solicitud').value = new Date().toLocaleDateString('en-CA');
       setSelectCaseInsensitive(EG('estado'), 'Pendiente');
+      if (state.user?.nombre) setSelectCaseInsensitive(EG('Tecnico responsable'), state.user.nombre);
     } else {
       FG.forEach(([key, type]) => {
         const el = EG(key);

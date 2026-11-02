@@ -36,6 +36,7 @@ function applyCase(el,fieldName){
    LOGIN
    ================================================================ */
 async function enter(u){
+ state.user=u;
  show('#login',false);
  show('#viewRegistros',true);
  $('#hdrUser').classList.remove('hidden');$('#hdrUser').classList.add('flex');
@@ -280,28 +281,17 @@ async function exportRegistrosPDF(){
   doc.save(filename);
 }
 
-// Control del menú desplegable de exportar en Registros
-const bExportBtn = $('#bExport');
-const exportMenu = $('#exportMenu');
-if(bExportBtn && exportMenu){
-  bExportBtn.onclick = (e) => {
-    e.stopPropagation();
-    exportMenu.classList.toggle('hidden');
-  };
-}
 if($('#bExpCSV')){
   $('#bExpCSV').onclick = () => {
-    if(exportMenu) exportMenu.classList.add('hidden');
     if(!state.rows||state.rows.length===0){alert('No hay resultados para exportar. Realiza una búsqueda primero.');return;}
     exportCSV(state.rows, 'busqueda_registros.csv');
   };
 }
 if($('#bExpPDF')){
   $('#bExpPDF').onclick = async () => {
-    if(exportMenu) exportMenu.classList.add('hidden');
     const button=$('#bExpPDF');
     button.disabled=true;
-    button.textContent='Preparando PDF…';
+    button.textContent='Preparando…';
     try {
       await exportRegistrosPDF();
     } catch(error) {
@@ -309,16 +299,10 @@ if($('#bExpPDF')){
       alert(error.message||'No se pudo generar el PDF.');
     } finally {
       button.disabled=false;
-      button.textContent='Exportar PDF (Cuadro)';
+      button.textContent='PDF';
     }
   };
 }
-document.addEventListener('click', (e) => {
-  const wrapper = $('#exportWrapper');
-  if(wrapper && exportMenu && !wrapper.contains(e.target)){
-    exportMenu.classList.add('hidden');
-  }
-});
 
 /* ================================================================
    FORMULARIO (Añadir / Ver registro)
@@ -340,23 +324,24 @@ function campo([k,t,o]){
 
  const rapido=k=='CATEGORIA'?`<div class="col-span-4 md:col-span-2 flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-lg p-2">
    <span class="text-xs font-semibold">ID rápido de categoría</span>
-   <input id="qid" type="number" min="1" class="inp" style="width:6rem" placeholder="Ej: 1">
-   <span id="catIdDisplay" class="text-xs font-bold text-teal-700 ml-1"></span>
+   <input id="qid" type="number" min="1" class="inp" style="width:6rem">
  </div>`:'';
 
- return `${rapido}<label class="block ${spanClass}"><span class="text-xs font-semibold text-slate-600">${k}</span>${c}</label>`;
+ return `${rapido}<label class="block ${spanClass}"><span class="text-xs font-semibold text-slate-600">${k==='NIVEL TECNICO'?'Nivel':k}</span>${c}</label>`;
 }
 
 function catSub(){opts(E('SUB CATEGORIA'),uniq(state.data.categorias.filter(c=>c.CATEGORIA==E('CATEGORIA').value).map(c=>c.SUB_CATEGORIA)));catSS();}
 function catSS(){opts(E('SS CATEGORIA'),uniq(state.data.categorias.filter(c=>c.CATEGORIA==E('CATEGORIA').value&&c.SUB_CATEGORIA==E('SUB CATEGORIA').value).map(c=>c.SS_CATEGORIA)));updateCatId();}
 
 function updateCatId(){
+  const qid=$('#qid');
+  if(!qid)return;
   const catEl=E('CATEGORIA'), subEl=E('SUB CATEGORIA'), ssEl=E('SS CATEGORIA');
-  const display=$('#catIdDisplay');
-  if(!display)return;
-  if(!catEl||!catEl.value){display.textContent='';return;}
+  // No pisar lo que la persona está escribiendo en el propio campo.
+  if(document.activeElement===qid)return;
+  if(!catEl||!catEl.value){qid.value='';return;}
   const match=state.data.categorias.find(c=>c.CATEGORIA===catEl.value && c.SUB_CATEGORIA===(subEl?subEl.value:'') && c.SS_CATEGORIA===(ssEl?ssEl.value:''));
-  display.textContent=match?`ID: ${match.id}`:'';
+  qid.value=match?match.id:'';
 }
 
 function cats(c,s,ss){sv(E('CATEGORIA'),c??'');catSub();sv(E('SUB CATEGORIA'),s??'');catSS();sv(E('SS CATEGORIA'),ss??'');}
@@ -389,12 +374,16 @@ function abrir(mode,r={}){
  $('#fTitle').textContent=mode=='add'?'Nuevo registro':'Registro #'+r.ITEM;
  $('#fOk').textContent=mode=='add'?'Guardar':'Actualizar';
  $$('[data-k]').forEach(e=>{e.value='';});$('#qid').value='';
- const catIdDisp=$('#catIdDisplay');if(catIdDisp)catIdDisp.textContent='';
- F.forEach(([k,t,o])=>{if(t=='sel'&&o)E(k).selectedIndex=0;});
+  F.forEach(([k,t,o])=>{if(t=='sel'&&o)E(k).selectedIndex=0;});
  cats('','','');
  if(mode=='add'){
   E('ITEM').value='Automático';E('FECHA REC').value=new Date().toLocaleDateString('en-CA');
   E('SEMANA').value=semana(E('FECHA REC').value);E('PRIORIDAD').value='BAJO';tiempo();
+  const me=state.user&&state.user.nombre;
+  if(me&&[...E('RESPONSABLE DE ATENCION').options].some(o=>o.value===me)){
+   E('RESPONSABLE DE ATENCION').value=me;
+   E('NIVEL TECNICO').value=(state.data.usuarios.find(u=>u.nombre===me)||{}).nivel||state.user.nivel||'';
+  }
  }else{
   F.forEach(([k])=>{if(!k.includes('CATEGORIA'))E(k).value=r[k]??'';});
   cats(r.CATEGORIA,r['SUB CATEGORIA'],r['SS CATEGORIA']);

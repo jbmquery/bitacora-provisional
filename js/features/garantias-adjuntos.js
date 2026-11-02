@@ -1,11 +1,13 @@
 import { $, escapeHtml as esc } from '../components/dom.js';
 
-const MAX_BYTES = 10 * 1024 * 1024; // límite por archivo (ya comprimido, en el caso de imágenes)
+const MAX_BYTES = 25 * 1024 * 1024; // límite por archivo (ya comprimido, en el caso de imágenes)
 const MAX_DIM = 1600;               // lado máximo de las imágenes tras comprimir
 const QUALITY = 0.82;               // calidad JPEG al comprimir
-const EXT_PERMITIDAS = ['png', 'jpg', 'jpeg', 'pdf'];
 
-const extOf = name => String(name || '').split('.').pop().toLowerCase();
+const extOf = name => {
+  const parts = String(name || '').split('.');
+  return parts.length > 1 ? parts.pop().toLowerCase() : '';
+};
 const nombreVisible = name => String(name || '').replace(/^\d{8}-\d{6}_/, '');
 const esImagen = ext => ['png', 'jpg', 'jpeg'].includes(ext);
 
@@ -90,14 +92,20 @@ export function createAdjuntosManager({ api }) {
       </li>`;
   }
 
-  const pdfThumb = '<div class="w-12 h-12 shrink-0 rounded bg-red-100 text-red-700 text-[11px] font-bold flex items-center justify-center">PDF</div>';
+  const fileThumb = ext => {
+    const label = ext ? ext.slice(0, 4).toUpperCase() : 'FILE';
+    const color = ext === 'pdf' ? 'bg-red-100 text-red-700'
+      : ['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext) ? 'bg-indigo-100 text-indigo-700'
+        : 'bg-slate-200 text-slate-600';
+    return `<div class="w-12 h-12 shrink-0 rounded ${color} text-[11px] font-bold flex items-center justify-center">${esc(label)}</div>`;
+  };
   const imgThumb = src => `<img src="${esc(src)}" alt="" loading="lazy" class="w-12 h-12 shrink-0 rounded object-cover bg-slate-200" onerror="this.style.visibility='hidden'">`;
 
   function render() {
     const existingHtml = existing.map(file => card({
       thumb: esImagen(extOf(file.nombre))
         ? imgThumb(`https://drive.google.com/thumbnail?id=${encodeURIComponent(file.id)}&sz=w160`)
-        : pdfThumb,
+        : fileThumb(extOf(file.nombre)),
       name: nombreVisible(file.nombre),
       meta: fmtSize(file.size || 0),
       link: file.url,
@@ -106,7 +114,7 @@ export function createAdjuntosManager({ api }) {
     }));
 
     const pendingHtml = pending.map(item => card({
-      thumb: item.preview ? imgThumb(item.preview) : pdfThumb,
+      thumb: item.preview ? imgThumb(item.preview) : fileThumb(extOf(item.name)),
       name: item.name,
       meta: fmtSize(item.blob.size),
       tag: 'Se subirá al guardar',
@@ -126,10 +134,6 @@ export function createAdjuntosManager({ api }) {
     const errors = [];
     for (const file of fileList) {
       const ext = extOf(file.name);
-      if (!EXT_PERMITIDAS.includes(ext)) {
-        errors.push(`"${file.name}": formato no permitido (solo PNG, JPG, JPEG o PDF).`);
-        continue;
-      }
 
       let blob = file;
       let name = file.name;
