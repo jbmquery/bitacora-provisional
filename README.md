@@ -13,7 +13,7 @@ Aplicación web de mesa de ayuda que sincroniza sus registros con Google Sheets.
 
 La aplicación usa módulos JavaScript nativos del navegador; no requiere un paso de compilación. Chart.js y las bibliotecas de PDF se cargan solo al abrir el Dashboard o exportar, para reducir la carga inicial. Debe abrirse mediante HTTP: abrir `index.html` directamente como `file://` bloquea la carga de los módulos ES.
 
-El módulo Garantías requiere que el backend de Google Apps Script exponga las acciones `buscarGarantias`, `guardarGarantia` y `actualizarGarantia`. Después de actualizar el script, publica una nueva versión de la implementación para que la URL configurada en `js/services/api.js` use esos métodos.
+El módulo Garantías requiere que el backend de Google Apps Script exponga las acciones `buscarGarantias`, `guardarGarantia`, `actualizarGarantia` y `buscarHistorialGarantia`. Al marcar la casilla de comentario y guardar, se agrega una fila en `HISTORIAL GARANTÍA` con ID de cambio, ticket, fecha y hora, responsable, estado y comentario. La columna `HISTORICO` de `GARANTÍA` conserva el ID del último comentario guardado. Las columnas y la hoja de historial se crean automáticamente al consultar o guardar garantías. Después de actualizar el script, publica una nueva versión de la implementación para que la URL configurada en `js/services/api.js` use esos métodos.
 
 ### Ejecutar localmente en Windows
 

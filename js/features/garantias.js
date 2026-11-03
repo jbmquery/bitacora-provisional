@@ -1,10 +1,11 @@
 import { api as defaultApi } from '../services/api.js';
 import { $, $$, escapeHtml as esc, setOptions as opts, show } from '../components/dom.js';
-import { BIENES_GARANTIA, ESTADOS_GARANTIA, FG, SPAN_MAP_G } from '../config/app-config.js';
+import { BIENES_GARANTIA, ESTADOS_GARANTIA, FG } from '../config/app-config.js';
 import { createAdjuntosManager } from './garantias-adjuntos.js';
 
 const ICON_COPY = '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
 const ICON_CHECK = '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+const ICON_HISTORY = '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-2.64-6.36M21 3v6h-6"/></svg>';
 
 export function createGarantiasFeature({ state, api = defaultApi }) {
   let mode = 'add';
@@ -46,20 +47,37 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
   }
 
   function campo([key, type, options, label]) {
-    const span = SPAN_MAP_G[key] || { m: 4, d: 4 };
-    const spanClass = `col-span-${span.m} md:col-span-${span.d}`;
+    const spanClass = key === 'PROBLEMA' || key === 'SOLUCION' ? 'col-span-full' : '';
     const displayLabel = label || key;
 
     let control;
     if (type === 'sel') {
-      control = `<select data-gk="${key}" class="inp">${(options || []).map(option => `<option value="${esc(option)}">${esc(option)}</option>`).join('')}</select>`;
+      control = `<select data-gk="${key}" class="inp h-10">${(options || []).map(option => `<option value="${esc(option)}">${esc(option)}</option>`).join('')}</select>`;
     } else if (type === 'area') {
-      control = `<textarea data-gk="${key}" rows="2" class="inp"></textarea>`;
+      control = `<textarea data-gk="${key}" rows="2" class="inp min-h-20 resize-y"></textarea>`;
     } else {
-      control = `<input data-gk="${key}" type="${type === 'date' ? 'date' : 'text'}" ${type === 'ro' ? 'readonly' : ''} class="inp">`;
+      control = `<input data-gk="${key}" type="${type === 'date' ? 'date' : 'text'}" ${type === 'ro' ? 'readonly' : ''} class="inp h-10">`;
     }
 
-    return `<label class="block ${spanClass}"><span class="text-xs font-semibold uppercase text-slate-600">${esc(displayLabel)}</span>${control}</label>`;
+    if (key === 'estado') {
+      return `<div class="flex flex-col gap-1 ${spanClass}" data-status-field>
+        <label for="gEstadoSelect" class="text-xs font-semibold uppercase text-slate-600">${esc(displayLabel)}</label>
+        <div class="flex items-center gap-2">
+          ${control.replace(`data-gk="${key}"`, `data-gk="${key}" id="gEstadoSelect"`)}
+          <button id="gEstadoComentarioActivo" type="button" class="g-comment-toggle" aria-label="Agregar comentario sobre el estado" aria-pressed="false" title="Agregar comentario">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8m-8 4h5m-8 6 3.2-3.2A8 8 0 1 1 12 20H8z"/>
+            </svg>
+          </button>
+        </div>
+        <div id="gEstadoComentarioWrap" class="hidden mt-2">
+          <label for="gEstadoComentario" class="mb-1 block text-xs font-semibold text-slate-600">Comentario del estado</label>
+          <textarea id="gEstadoComentario" rows="2" class="inp min-h-20 resize-y" placeholder="Escribe el comentario"></textarea>
+        </div>
+      </div>`;
+    }
+
+    return `<label class="flex flex-col gap-1 ${spanClass}"><span class="text-xs font-semibold uppercase text-slate-600">${esc(displayLabel)}</span>${control}</label>`;
   }
 
   function poblarOpcionesModal() {
@@ -73,6 +91,13 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     $$('#gForm [data-gk]').forEach(el => applyCase(el));
 
     poblarOpcionesModal();
+
+    $('#gEstadoComentarioActivo').onclick = event => {
+      const active = event.currentTarget.getAttribute('aria-pressed') !== 'true';
+      event.currentTarget.setAttribute('aria-pressed', String(active));
+      show('#gEstadoComentarioWrap', active);
+      if (!active) $('#gEstadoComentario').value = '';
+    };
 
     EG('dependencia').onchange = event => {
       const faculty = (state.data.facultades || []).find(item => item.DEPENDENCIA === event.target.value);
@@ -136,7 +161,18 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
         } else {
           alert(`No se encontró la garantía con ticket #${ticket}. Actualiza la búsqueda e inténtalo nuevamente.`);
         }
+        return;
       }
+
+      const historyButton = event.target.closest('.btn-history-garantia');
+      if (historyButton) {
+        await abrirHistorial(historyButton.dataset.ticket);
+      }
+    });
+
+    $('#ghClose').onclick = cerrarHistorial;
+    $('#ghm').addEventListener('click', event => {
+      if (event.target === $('#ghm')) cerrarHistorial();
     });
 
     buscar();
@@ -173,6 +209,48 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       console.error('No se pudieron buscar las garantías:', error);
       container.innerHTML = '';
       alert('Ocurrió un error al buscar garantías. Inténtalo nuevamente.');
+    }
+  }
+
+  function cerrarHistorial() {
+    show('#ghm', false);
+  }
+
+  async function abrirHistorial(ticket) {
+    $('#ghTitle').textContent = `Historial · Ticket #${ticket}`;
+    $('#ghContent').innerHTML = '<p class="py-8 text-center text-sm text-slate-500">Cargando historial…</p>';
+    show('#ghm', true);
+
+    try {
+      const result = await api('buscarHistorialGarantia', { ticket });
+      if (!result.ok) throw new Error(result.msg || 'No se pudo cargar el historial.');
+      if (!Array.isArray(result.rows)) throw new Error('El servidor devolvió un historial con formato inválido.');
+
+      $('#ghContent').innerHTML = result.rows.length
+        ? `<div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="text-xs uppercase text-slate-500">
+                <tr>
+                  <th class="px-3 py-2">Fecha y hora</th>
+                  <th class="px-3 py-2">Responsable</th>
+                  <th class="px-3 py-2">Estado</th>
+                  <th class="px-3 py-2">Comentario</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${result.rows.map(item => `<tr>
+                  <td class="whitespace-nowrap px-3 py-2">${esc(item['FECHA Y HORA'] || '—')}</td>
+                  <td class="px-3 py-2">${esc(item.RESPONSABLE || '—')}</td>
+                  <td class="px-3 py-2">${esc(item.ESTADO || '—')}</td>
+                  <td class="whitespace-pre-wrap px-3 py-2">${esc(item.COMENTARIO || '—')}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`
+        : '<p class="py-8 text-center text-sm text-slate-500">Este ticket aún no tiene comentarios de estado.</p>';
+    } catch (error) {
+      console.error(`No se pudo cargar el historial del ticket #${ticket}:`, error);
+      $('#ghContent').innerHTML = `<p class="py-8 text-center text-sm text-red-600">${esc(error.message || 'No se pudo cargar el historial.')}</p>`;
     }
   }
 
@@ -326,6 +404,9 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
                     </svg>
                     Actualizar
                   </button>
+                  <button type="button" data-ticket="${esc(item.TICKET)}" class="btn-history-garantia btn bg-slate-600 hover:bg-slate-700 !p-2" title="Ver historial" aria-label="Ver historial del ticket #${esc(item.TICKET)}">
+                    ${ICON_HISTORY}
+                  </button>
                 </div>
               </div>
               ${renderTimeline(item)}
@@ -346,6 +427,9 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     poblarOpcionesModal();
 
     $$('#gForm [data-gk]').forEach(element => { element.value = ''; });
+    $('#gEstadoComentarioActivo').setAttribute('aria-pressed', 'false');
+    $('#gEstadoComentario').value = '';
+    show('#gEstadoComentarioWrap', false);
     FG.forEach(([key, type, options]) => {
       if (type === 'sel' && options) EG(key).selectedIndex = 0;
     });
@@ -391,6 +475,14 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       return;
     }
 
+    const registrarComentarioEstado = $('#gEstadoComentarioActivo').getAttribute('aria-pressed') === 'true';
+    const comentarioEstado = $('#gEstadoComentario').value.trim();
+    if (registrarComentarioEstado && !comentarioEstado) {
+      alert('Escribe el comentario del estado o desmarca la casilla.');
+      $('#gEstadoComentario').focus();
+      return;
+    }
+
     const requestMode = mode;
     if (requestMode === 'edit' && !R.TICKET) {
       alert('No se puede actualizar la garantía porque falta el número de ticket. Cierra el formulario y vuelve a abrir el registro.');
@@ -417,8 +509,8 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     b.disabled = true;
     try {
       const res = requestMode === 'add'
-        ? await api('guardarGarantia', { reg: R })
-        : await api('actualizarGarantia', { ticket: R.TICKET, reg: R });
+        ? await api('guardarGarantia', { reg: R, registrarComentarioEstado, comentarioEstado })
+        : await api('actualizarGarantia', { ticket: R.TICKET, reg: R, registrarComentarioEstado, comentarioEstado });
 
       if (!res.ok) {
         alert(res.msg || (requestMode === 'edit'

@@ -16,6 +16,9 @@
  .inp-lower{text-transform:lowercase}
  .kpi-card{@apply relative border-l-4 bg-white rounded-2xl p-5 shadow-sm}
  .kpi-card::after{content:"";position:absolute;top:14px;bottom:14px;right:56px;border-right:2px dashed #E2E8F0}
+ .garantia-form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));align-items:start}
+ .g-comment-toggle{@apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 transition-colors hover:border-teal-500 hover:bg-teal-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500}
+ .g-comment-toggle[aria-pressed="true"]{@apply border-teal-600 bg-teal-50 text-teal-700}
 }
 .navbar-brand,.navbar-links,.navbar-user{font-family:"Jura",sans-serif}
 .navbar-links.hidden{display:none}
@@ -361,7 +364,7 @@
 <div id="gm" class="hidden fixed inset-0 bg-black/50 z-50 overflow-y-auto p-2 sm:p-4">
  <div class="mx-auto max-w-5xl bg-white rounded-xl p-4 sm:p-6">
   <h3 id="gTitle" class="font-bold text-lg mb-4"></h3>
-  <div id="gForm" class="grid grid-cols-4 md:grid-cols-8 gap-3"></div>
+  <div id="gForm" class="garantia-form-grid grid gap-3 sm:gap-4"></div>
   <div id="gAdj" class="mt-5 border-t border-slate-200 pt-4">
    <div class="flex items-center justify-between gap-2 flex-wrap">
     <div>
@@ -378,6 +381,17 @@
    <button id="gCancel" type="button" class="btn bg-slate-500 hover:bg-slate-600">Cancelar</button>
    <button id="gOk" type="button" class="btn bg-teal-700 hover:bg-teal-800"></button>
   </div>
+ </div>
+</div>
+
+<!-- MODAL HISTORIAL DE GARANTÍA -->
+<div id="ghm" class="hidden fixed inset-0 bg-black/50 z-50 overflow-y-auto p-2 sm:p-4">
+ <div class="mx-auto mt-8 max-w-4xl rounded-xl bg-white p-4 sm:p-6">
+  <div class="mb-4 flex items-center justify-between gap-3">
+   <h3 id="ghTitle" class="font-bold text-lg"></h3>
+   <button id="ghClose" type="button" class="btn bg-slate-500 hover:bg-slate-600">Cerrar</button>
+  </div>
+  <div id="ghContent"></div>
  </div>
 </div>
 
