@@ -78,7 +78,7 @@ const FG = [
   ['Tecnico responsable', 'sel'],
   ['dependencia', 'sel'],
   ['predio', 'ro'],
-  ['oficina', 'text'],
+  ['oficina', 'sel-search'],
   ['equipo', 'text'],
   ['direccion', 'text', null, 'dirección'],
   ['Fecha Solicitud', 'date'],

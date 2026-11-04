@@ -81,6 +81,21 @@
  .navbar-links::before,.navbar-links::after{transition:none}
  .navbar-link{transition:none}
 }
+
+ .cbx-wrap{position:relative;width:100%}
+ .cbx-input-wrap{position:relative;display:flex;align-items:center}
+ .cbx-input{padding-right:2rem !important}
+ .cbx-chevron{position:absolute;right:0.65rem;pointer-events:none;color:#64748b;transition:transform 150ms ease}
+ .cbx-wrap.is-open .cbx-chevron{transform:rotate(180deg);color:#0d9488}
+ .cbx-list{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:70;max-height:14rem;overflow-y:auto;background:white;border:1px solid #cbd5e1;border-radius:0.5rem;box-shadow:0 10px 15px -3px rgb(15 23 42 / 0.12),0 4px 6px -4px rgb(15 23 42 / 0.1);padding:0.25rem 0;margin:0;list-style:none;display:none}
+ .cbx-wrap.is-open .cbx-list{display:block}
+ .cbx-item{padding:0.45rem 0.75rem;font-size:0.875rem;color:#1e293b;cursor:pointer;line-height:1.25rem;user-select:none}
+ .cbx-item:hover,.cbx-item.is-active{background:#f0fdfa;color:#0f766e}
+ .cbx-item.is-selected{font-weight:600;background:#f8fafc}
+ .cbx-create{padding:0.5rem 0.75rem;font-size:0.875rem;font-weight:600;color:#0f766e;background:#f0fdfa;border-top:1px solid #ccfbf1;cursor:pointer;display:flex;align-items:center;gap:0.35rem}
+ .cbx-create:hover,.cbx-create.is-active{background:#ccfbf1}
+ .cbx-empty{padding:0.5rem 0.75rem;font-size:0.8125rem;color:#94a3b8;font-style:italic;user-select:none}
+
 </style>
 </head>
 <body class="min-h-screen flex flex-col bg-slate-100 text-slate-800">

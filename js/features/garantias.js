@@ -1,5 +1,5 @@
 import { api as defaultApi } from '../services/api.js';
-import { $, $$, escapeHtml as esc, setOptions as opts, show } from '../components/dom.js';
+import { $, $$, escapeHtml as esc, setOptions as opts, show, initFormComboboxes, syncFormComboboxes } from '../components/dom.js';
 import { BIENES_GARANTIA, ESTADOS_GARANTIA, FG } from '../config/app-config.js';
 import { createAdjuntosManager } from './garantias-adjuntos.js';
 
@@ -51,7 +51,7 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     const displayLabel = label || key;
 
     let control;
-    if (type === 'sel') {
+    if (type === 'sel' || type === 'sel-search') {
       control = `<select data-gk="${key}" class="inp h-10">${(options || []).map(option => `<option value="${esc(option)}">${esc(option)}</option>`).join('')}</select>`;
     } else if (type === 'area') {
       control = `<textarea data-gk="${key}" rows="2" class="inp min-h-20 resize-y"></textarea>`;
@@ -84,6 +84,11 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     const techNames = (state.data.usuarios || []).map(user => user.nombre).sort((a, b) => a.localeCompare(b));
     opts(EG('Tecnico responsable'), techNames, 'Seleccionar técnico...');
     opts(EG('dependencia'), (state.data.facultades || []).map(faculty => faculty.DEPENDENCIA), 'Seleccionar dependencia...');
+    const oficinasGarantia = [...new Set([
+      ...(state.data.oficinas || []),
+      ...rows.map(r => String(r.oficina ?? '').trim()).filter(Boolean)
+    ])].sort((a, b) => a.localeCompare(b));
+    opts(EG('oficina'), oficinasGarantia, 'Buscar o crear oficina...');
   }
 
   function armarModal() {
@@ -103,6 +108,8 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       const faculty = (state.data.facultades || []).find(item => item.DEPENDENCIA === event.target.value);
       EG('predio').value = faculty ? faculty.PREDIO : '';
     };
+
+    initFormComboboxes('#gForm');
   }
 
   function initializeView() {
@@ -445,7 +452,7 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       FG.forEach(([key, type]) => {
         const el = EG(key);
         if (!el) return;
-        if (type === 'sel') {
+        if (type === 'sel' || type === 'sel-search') {
           setSelectCaseInsensitive(el, r[key]);
         } else {
           el.value = r[key] ?? '';
@@ -454,6 +461,7 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       EG('TICKET').value = currentTicket;
     }
 
+    syncFormComboboxes('#gForm');
     show('#gm', true);
     adjuntos.reset(mode === 'edit' ? currentTicket : '');
   }
@@ -545,6 +553,9 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
         return;
       }
 
+      if (R.oficina) {
+        state.data.oficinas = [...new Set([...(state.data.oficinas || []), R.oficina])].sort();
+      }
       alert(requestMode === 'add'
         ? `Garantía registrada (TICKET #${ticket})`
         : `Garantía #${ticket} actualizada correctamente`);

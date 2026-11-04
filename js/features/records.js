@@ -2,7 +2,7 @@ import { api as defaultApi } from '../services/api.js';
 import {
   defaultVisibleColumns, getVisibleColumns, saveVisibleColumns
 } from '../services/storage.js';
-import { $, $$, field as E, unique as uniq, escapeHtml as esc, setOptions as opts, show, setValue as sv } from '../components/dom.js';
+import { $, $$, field as E, unique as uniq, escapeHtml as esc, setOptions as opts, show, setValue as sv, initFormComboboxes, syncFormComboboxes } from '../components/dom.js';
 import { initializeRecordFilters } from '../components/record-filters.js';
 import { createRecordsTable } from '../components/records-table.js';
 import { loadPdfLibraries } from '../services/libraries.js';
@@ -377,6 +377,7 @@ function armar(){
  E('CORREO').oninput=e=>{const u=state.data.correos[e.target.value.trim().toLowerCase()];if(u)E('USUARIO SOLICITANTE').value=u;};
  E('TIPO').onchange=E('PRIORIDAD').onchange=tiempo;
  $('#copy').onclick=()=>navigator.clipboard.writeText(E('ASUNTO').value).then(()=>{$('#copy').textContent='¡Copiado!';setTimeout(()=>$('#copy').textContent='Copiar',1200);});
+ initFormComboboxes('#fForm');
 }
 
 function abrir(requestedMode,r={}){
@@ -384,7 +385,7 @@ function abrir(requestedMode,r={}){
  $('#fTitle').textContent=mode=='add'?'Nuevo registro':'Registro #'+r.ITEM;
  $('#fOk').textContent=mode=='add'?'Guardar':'Actualizar';
  $$('[data-k]').forEach(e=>{e.value='';});$('#qid').value='';
-  F.forEach(([k,t,o])=>{if(t=='sel'&&o)E(k).selectedIndex=0;});
+ F.forEach(([k,t,o])=>{if((t=='sel'||t=='sel-search')&&o)E(k).selectedIndex=0;});
  cats('','','');
  if(mode=='add'){
   E('ITEM').value='Automático';E('FECHA REC').value=new Date().toLocaleDateString('en-CA');
@@ -395,10 +396,16 @@ function abrir(requestedMode,r={}){
    E('NIVEL TECNICO').value=(state.data.usuarios.find(u=>u.nombre===me)||{}).nivel||state.user.nivel||'';
   }
  }else{
-  F.forEach(([k])=>{if(!k.includes('CATEGORIA'))E(k).value=r[k]??'';});
+  F.forEach(([k,t])=>{
+   if(!k.includes('CATEGORIA')){
+    if(t==='sel'||t==='sel-search') sv(E(k),r[k]??'');
+    else E(k).value=r[k]??'';
+   }
+  });
   cats(r.CATEGORIA,r['SUB CATEGORIA'],r['SS CATEGORIA']);
  }
  E('FECHA REC').disabled=mode!='add';
+ syncFormComboboxes('#fForm');
  show('#fm',true);
 }
 $('#fCancel').onclick=()=>show('#fm',false);
@@ -421,6 +428,10 @@ $('#fOk').onclick=async()=>{
  const r=mode=='add'?await api('guardar',{reg:R}):await api('actualizar',{hoja:sheet,reg:R});
  b.disabled=false;
  if(!r.ok)return alert(r.msg);
+ if(R.OFICINA){
+  state.data.oficinas = uniq([...(state.data.oficinas||[]), R.OFICINA]).sort();
+  opts(E('OFICINA'), state.data.oficinas);
+ }
  alert(mode=='add'?`Registro guardado en ${r.hoja} (ITEM ${r.item})`:'Registro actualizado');
  show('#fm',false);
  try {
@@ -434,3 +445,4 @@ $('#fOk').onclick=async()=>{
 
   return { enter };
 }
+ 
