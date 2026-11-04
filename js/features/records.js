@@ -59,10 +59,11 @@ async function enter(u){
   $('#tabRegistros').disabled=false;
   $('#tabDashboard').disabled=false;
   if($('#tabGarantias')) $('#tabGarantias').disabled=false;
+  const responsiblesReady=refreshResponsibles().then(selectSessionResponsible);
   Promise.allSettled([
-   refreshResponsibles(),
+   responsiblesReady,
    refreshAvailableStates(),
-   buscar()
+   responsiblesReady.catch(()=>{}).then(buscar)
   ]).then(results=>{
    results.slice(0,2).forEach((result,index)=>{
     if(result.status==='rejected'){
@@ -88,6 +89,15 @@ async function enter(u){
    ================================================================ */
 let refreshResponsibles = async () => {};
 let refreshAvailableStates = async () => {};
+
+// Deja seleccionado en el filtro al técnico en sesión (la búsqueda inicial usa este valor).
+function selectSessionResponsible(){
+ const name=state.user&&state.user.nombre;
+ const select=$('#fResp');
+ if(!name||!select)return;
+ if(![...select.options].some(o=>o.value===name))select.add(new Option(name,name));
+ select.value=name;
+}
 
 function iniFiltros(){
  const filters = initializeRecordFilters(state.data, buscar, api);
@@ -369,8 +379,8 @@ function armar(){
  $('#copy').onclick=()=>navigator.clipboard.writeText(E('ASUNTO').value).then(()=>{$('#copy').textContent='¡Copiado!';setTimeout(()=>$('#copy').textContent='Copiar',1200);});
 }
 
-function abrir(mode,r={}){
- mode=mode;sheet=r._hoja||'';
+function abrir(requestedMode,r={}){
+ mode=requestedMode;sheet=r._hoja||'';
  $('#fTitle').textContent=mode=='add'?'Nuevo registro':'Registro #'+r.ITEM;
  $('#fOk').textContent=mode=='add'?'Guardar':'Actualizar';
  $$('[data-k]').forEach(e=>{e.value='';});$('#qid').value='';

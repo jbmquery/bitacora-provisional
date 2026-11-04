@@ -114,6 +114,8 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
 
     const techNames = (state.data.usuarios || []).map(user => user.nombre).sort((a, b) => a.localeCompare(b));
     opts($('#gfTec'), techNames, 'TODOS');
+    const sessionTech = state.user && state.user.nombre;
+    if (sessionTech && techNames.includes(sessionTech)) $('#gfTec').value = sessionTech;
     opts($('#gfBien'), BIENES_GARANTIA, 'TODOS');
     opts($('#gfEst'), ESTADOS_GARANTIA, 'TODOS');
 
