@@ -1,6 +1,7 @@
 import { api as defaultApi } from '../services/api.js';
 import { $, $$, escapeHtml as esc, setOptions as opts, show, initFormComboboxes, syncFormComboboxes } from '../components/dom.js';
 import { BIENES_GARANTIA, ESTADOS_GARANTIA, FG } from '../config/app-config.js';
+import { clearSession } from '../services/storage.js';
 import { createAdjuntosManager } from './garantias-adjuntos.js';
 
 const ICON_COPY = '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
@@ -46,6 +47,34 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     }
   }
 
+  // Número de serie: se normaliza igual que en el backend (sin espacios, mayúsculas).
+  const normSerie = value => String(value ?? '').replace(/\s+/g, '').toUpperCase();
+  const serieBuscada = () => normSerie($('#gfSerie').value);
+
+  // El filtro por serie es exclusivo: mientras haya serie, los demás filtros se bloquean y no se aplican.
+  function sincronizarFiltrosSerie() {
+    const activa = Boolean(serieBuscada());
+    ['#gfTec', '#gfBien', '#gfEst'].forEach(id => { $(id).disabled = activa; });
+    show('#gfHint', activa);
+  }
+
+  // Autor del comentario: lo fija la sesión; el campo es de solo lectura y se restaura si algo lo altera.
+  function bloquearAutorComentario() {
+    const input = $('#gEstadoComentarioAutor');
+    const nombre = state.user?.nombre || '';
+    const restaurar = () => { if (input.value !== nombre) input.value = nombre; };
+    restaurar();
+    input.readOnly = true;
+    input.tabIndex = -1;
+    input.setAttribute('aria-readonly', 'true');
+    if (!input.dataset.locked) {
+      input.dataset.locked = '1';
+      ['beforeinput', 'paste', 'drop', 'cut'].forEach(type => input.addEventListener(type, event => event.preventDefault()));
+      input.addEventListener('input', restaurar);
+      input.addEventListener('change', restaurar);
+    }
+  }
+
   function campo([key, type, options, label]) {
     const spanClass = key === 'PROBLEMA' || key === 'SOLUCION' ? 'col-span-full' : '';
     const displayLabel = label || key;
@@ -71,6 +100,8 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
           </button>
         </div>
         <div id="gEstadoComentarioWrap" class="hidden mt-2">
+          <label for="gEstadoComentarioAutor" class="mb-1 block text-xs font-semibold text-slate-600">Comentario registrado por</label>
+          <input id="gEstadoComentarioAutor" type="text" readonly tabindex="-1" aria-readonly="true" autocomplete="off" class="inp h-10 mb-2 cursor-not-allowed select-none" title="Se registra automáticamente con tu sesión y no se puede modificar">
           <label for="gEstadoComentario" class="mb-1 block text-xs font-semibold text-slate-600">Comentario del estado</label>
           <textarea id="gEstadoComentario" rows="2" class="inp min-h-20 resize-y" placeholder="Escribe el comentario"></textarea>
         </div>
@@ -101,6 +132,7 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       const active = event.currentTarget.getAttribute('aria-pressed') !== 'true';
       event.currentTarget.setAttribute('aria-pressed', String(active));
       show('#gEstadoComentarioWrap', active);
+      if (active) bloquearAutorComentario();
       if (!active) $('#gEstadoComentario').value = '';
     };
 
@@ -125,6 +157,10 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     if (sessionTech && techNames.includes(sessionTech)) $('#gfTec').value = sessionTech;
     opts($('#gfBien'), BIENES_GARANTIA, 'TODOS');
     opts($('#gfEst'), ESTADOS_GARANTIA, 'TODOS');
+    $('#gfSerie').addEventListener('input', sincronizarFiltrosSerie);
+    $('#gfSerie').addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); buscar(); }
+    });
 
     armarModal();
     adjuntos.bind();
@@ -132,7 +168,8 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     $('#gbBus').onclick = buscar;
     $('#gbClr').onclick = () => {
       $('#gfTec').value = '';
-      $('#gfFecha').value = '';
+      $('#gfSerie').value = '';
+      sincronizarFiltrosSerie();
       $('#gfBien').value = '';
       $('#gfEst').value = '';
       buscar();
@@ -198,12 +235,10 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     container.innerHTML = '<div class="bg-white rounded-xl shadow p-8 text-center text-slate-500 text-sm">Cargando garantías…</div>';
 
     try {
-      const result = await api('buscarGarantias', {
-        tec: $('#gfTec').value,
-        fecha: $('#gfFecha').value,
-        bien: $('#gfBien').value,
-        estado: $('#gfEst').value
-      });
+      const serie = serieBuscada();
+      const result = await api('buscarGarantias', serie
+        ? { serie }
+        : { tec: $('#gfTec').value, bien: $('#gfBien').value, estado: $('#gfEst').value });
 
       if (!result.ok) {
         container.innerHTML = '';
@@ -212,7 +247,7 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       }
 
       rows = result.rows || [];
-      $('#gCnt').textContent = `${rows.length} garantía(s) encontrada(s)`;
+      $('#gCnt').textContent = `${rows.length} garantía(s) encontrada(s)${serie ? ` · serie ${serie}` : ''}`;
       renderResultados();
     } catch (error) {
       console.error('No se pudieron buscar las garantías:', error);
@@ -351,7 +386,9 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     if (!rows.length) {
       container.innerHTML = `
         <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
-          <p class="text-slate-400 text-sm">No se encontraron garantías con los filtros seleccionados.</p>
+          <p class="text-slate-400 text-sm">${serieBuscada()
+            ? `No se encontró ninguna garantía con el N° de serie ${esc(serieBuscada())}.`
+            : 'No se encontraron garantías con los filtros seleccionados.'}</p>
         </div>`;
       return;
     }
@@ -439,6 +476,7 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     $('#gEstadoComentarioActivo').setAttribute('aria-pressed', 'false');
     $('#gEstadoComentario').value = '';
     show('#gEstadoComentarioWrap', false);
+    $('#gEstadoComentarioAutor').value = state.user?.nombre || '';
     FG.forEach(([key, type, options]) => {
       if (type === 'sel' && options) EG(key).selectedIndex = 0;
     });
@@ -493,6 +531,11 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
       return;
     }
 
+    if (registrarComentarioEstado && !state.user?.token) {
+      alert('Tu sesión es anterior a esta actualización y no puede firmar comentarios. Cierra sesión e ingresa nuevamente.');
+      return;
+    }
+
     const requestMode = mode;
     if (requestMode === 'edit' && !R.TICKET) {
       alert('No se puede actualizar la garantía porque falta el número de ticket. Cierra el formulario y vuelve a abrir el registro.');
@@ -519,9 +562,15 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     b.disabled = true;
     try {
       const res = requestMode === 'add'
-        ? await api('guardarGarantia', { reg: R, registrarComentarioEstado, comentarioEstado })
-        : await api('actualizarGarantia', { ticket: R.TICKET, reg: R, registrarComentarioEstado, comentarioEstado });
+        ? await api('guardarGarantia', { reg: R, registrarComentarioEstado, comentarioEstado, token: state.user?.token })
+        : await api('actualizarGarantia', { ticket: R.TICKET, reg: R, registrarComentarioEstado, comentarioEstado, token: state.user?.token });
 
+      if (!res.ok && res.code === 'SESION_INVALIDA') {
+        alert(`${res.msg}\n\nSe cerrará la sesión actual.`);
+        clearSession();
+        location.reload();
+        return;
+      }
       if (!res.ok) {
         alert(res.msg || (requestMode === 'edit'
           ? 'El servidor no pudo actualizar la garantía. Verifica que actualizarGarantia esté publicada en Apps Script.'
