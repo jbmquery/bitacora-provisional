@@ -4,16 +4,45 @@ Aplicación web de mesa de ayuda que sincroniza sus registros con Google Sheets.
 
 ## Estructura
 
-- `index.html`: estructura de las vistas y estilos con Tailwind CSS.
-- `frontend/app.js`: punto de entrada que conecta los módulos de la aplicación.
-- `frontend/config/app-config.js`: campos, opciones y constantes compartidas.
-- `frontend/features/`: flujos de autenticación, registros, garantías, dashboard e informes.
-- `frontend/components/`: utilidades de interfaz, navegación, filtros y tabla de registros.
-- `frontend/services/`: acceso a la API y persistencia de sesión/preferencias.
+```
+bitacora/
+├── backend/                     Google Apps Script (un archivo .gs por función)
+│   ├── appsscript.json
+│   ├── Config.gs                constantes y cabeceras de hojas
+│   ├── Utilidades.gs            helpers compartidos (sh, tabla, err…)
+│   ├── Auth.gs                  login, reset, token de sesión firmado
+│   ├── Api.gs                   doGet/doPost y tabla de acciones
+│   ├── Registros.gs             hojas mensuales
+│   ├── Garantias.gs             CRUD de garantías (guarda el creador del ticket)
+│   ├── GarantiasHistorial.gs    comentarios/historial por ticket
+│   ├── Adjuntos.gs              archivos en Drive
+│   └── Notificaciones.gs        bandeja interna: crear, listar, marcar leídas
+└── frontend/                    servir esta carpeta por HTTP
+    ├── index.html
+    ├── app.js
+    ├── components/  dom, navigation, record-filters, records-table, notification-list
+    ├── config/      app-config
+    ├── features/    auth, records, garantias, garantias-adjuntos, dashboard, dashboard-report, notifications
+    └── services/    api, libraries, storage, notifications-service
+```
 
-La aplicación usa módulos JavaScript nativos del navegador; no requiere un paso de compilación. Chart.js y las bibliotecas de PDF se cargan solo al abrir el Dashboard o exportar, para reducir la carga inicial. Debe abrirse mediante HTTP: abrir `index.html` directamente como `file://` bloquea la carga de los módulos ES.
+`index.html` vive en la raíz y carga `frontend/app.js`; los módulos JavaScript restantes están dentro de `frontend/`.
 
-El módulo Garantías requiere que el backend de Google Apps Script exponga las acciones `buscarGarantias`, `guardarGarantia`, `actualizarGarantia` y `buscarHistorialGarantia`. Al marcar la casilla de comentario y guardar, se agrega una fila en `HISTORIAL GARANTÍA` con ID de cambio, ticket, fecha y hora, responsable, estado y comentario. La columna `HISTORICO` de `GARANTÍA` conserva el ID del último comentario guardado. Las columnas y la hoja de historial se crean automáticamente al consultar o guardar garantías. Después de actualizar el script, publica una nueva versión de la implementación para que la URL configurada en `frontend/services/api.js` use esos métodos.
+## Notificaciones internas (bandeja)
+
+- Al guardar un comentario en una garantía, el backend crea una fila en la hoja `NOTIFICACIONES` para el **técnico que creó el ticket**. No se notifica si el autor del comentario es el mismo creador.
+- El creador se guarda en las columnas nuevas `CREADO POR` y `CREADO POR CORREO` (se crean solas) a partir del token de sesión. Para tickets antiguos, sin creador, se usa el `Tecnico responsable`.
+- Acciones nuevas: `listarNotificaciones`, `marcarNotificacionLeida`, `marcarTodasNotificacionesLeidas` (todas exigen el token; cada usuario solo ve las suyas).
+- Frontend: campana con contador en la cabecera, panel con la bandeja de notificaciones no leídas, aviso emergente al llegar una nueva (consulta cada 30 s con la pestaña visible) y, al pulsar una, se abre el historial del ticket. Al marcar una notificación como leída desaparece de la bandeja; su registro se conserva en la hoja `NOTIFICACIONES`.
+- `depurarNotificaciones()` borra las de más de 90 días (ejecutar a mano o con activador diario).
+- Tras actualizar el script publica una **nueva versión** de la implementación. Las sesiones previas no tienen token: deben cerrar sesión e ingresar de nuevo.
+
+## Ejecutar localmente en Windows
+
+```powershell
+cd bitacora
+py -m http.server 8765
+```
 
 ### Garantías: búsqueda por serie y autor de comentarios
 
@@ -22,10 +51,3 @@ El módulo Garantías requiere que el backend de Google Apps Script exponga las 
 - En la interfaz, el campo «Comentario registrado por» es de solo lectura y solo muestra la sesión activa.
 - Tras actualizar el script hay que publicar una **nueva versión** de la implementación. Las sesiones iniciadas antes de la actualización no tienen token: deben cerrar sesión e ingresar de nuevo para poder comentar.
 
-### Ejecutar localmente en Windows
-
-Abre una terminal en la carpeta del proyecto y ejecuta:
-
-```powershell
-py -m http.server 8765
-```

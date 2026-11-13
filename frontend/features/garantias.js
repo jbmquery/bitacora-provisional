@@ -620,5 +620,5 @@ export function createGarantiasFeature({ state, api = defaultApi }) {
     }
   }
 
-  return { initializeView };
+  return { initializeView, openTicketHistory: abrirHistorial };
 }

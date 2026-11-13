@@ -51,7 +51,7 @@ async function enter(u){
 
 
  try {
-  const response=await api('init');
+  const response=await api('init', { token: u.token });
   if(!response.ok)throw new Error(response.msg||'No se pudo cargar la información de la cuenta.');
   state.data=response;
   armar();
