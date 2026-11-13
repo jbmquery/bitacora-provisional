@@ -64,7 +64,7 @@ const ALL_COLUMNS = [
 // ====== CONFIGURACIÓN MÓDULO GARANTÍAS ======
 const BIENES_GARANTIA = ['CPU', 'Impresora', 'Pantalla Interactiva', 'Teclado', 'Tablet', 'Monitor', 'Laptop'];
 const MARCAS_GARANTIA = ['HP', 'Kyocera', 'Lenovo','Trump Board'];
-const ESTADOS_GARANTIA = ['Pendiente', 'Atendido', 'En proceso', 'Sin Respuesta', 'Cerrado', 'Reprogramado', 'No Procede'];
+const ESTADOS_GARANTIA = ['Pendiente', 'Atendido', 'En proceso', 'Sin Respuesta', 'Cerrado', 'Reprogramado', 'No Procede', 'En Cotizacion'];
 const FECHAS_GARANTIA = ['Fecha Solicitud', 'Fecha Atencion', 'Fecha de cierre'];
 
 // [campo, tipo, opciones, labelOpcional]
